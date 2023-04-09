@@ -1,14 +1,28 @@
 package tests;
 
+import com.google.common.hash.Hashing;
 import helpers.ValidatorInterface;
 import io.restassured.RestAssured;
+import io.restassured.response.Response;
 import io.restassured.response.ValidatableResponse;
+import model.CreateOrderModel;
 import model.CreateUserModel;
+import model.IngredientModel;
 import org.apache.http.HttpStatus;
 import org.junit.After;
 import org.junit.Before;
 
-import static helpers.Constants.BASE_URL;
+import java.nio.charset.StandardCharsets;
+import java.util.Arrays;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.UUID;
+import java.util.stream.Collectors;
+import java.util.stream.IntStream;
+
+import static helpers.Constants.*;
+import static helpers.Constants.SAUCE_INGREDIENT_TYPE;
+import static org.codehaus.groovy.runtime.DefaultGroovyMethods.collect;
 import static org.hamcrest.CoreMatchers.not;
 import static org.hamcrest.CoreMatchers.nullValue;
 import static org.hamcrest.core.Is.is;
@@ -58,5 +72,54 @@ public class TestBase {
             ValidatorInterface<ValidatableResponse, CreateUserModel> validationRules) {
             defaultFailedUserCreationValidationRules.validate(response, model);
             validationRules.validate(response, model);
+
+    }
+
+    protected CreateOrderModel getOrderContent(Response response) {
+        List<LinkedHashMap<String,String>> ingredientsFromJson = response.jsonPath().getList("data");
+
+        List<IngredientModel> ingredients = ingredientsFromJson.stream().map(ing ->
+                IngredientModel
+                        .builder()
+                        ._id(ing.get("_id"))
+                        .name(ing.get("name"))
+                        .type(ing.get("type"))
+                        .build()).collect(Collectors.toList());
+
+        IngredientModel bun = ingredients
+                .stream()
+                .filter(ing -> ing.getType().equals(BUN_INGREDIENT_TYPE))
+                .findFirst().orElse(new IngredientModel());
+
+        IngredientModel mainIngredient = ingredients
+                .stream()
+                .filter(ing -> ing.getType().equals(MAIN_INGREDIENT_TYPE))
+                .findFirst().orElse(new IngredientModel());
+
+        IngredientModel sauceIngredient = ingredients
+                .stream()
+                .filter(ing -> ing.getType().equals(SAUCE_INGREDIENT_TYPE))
+                .findFirst().orElse(new IngredientModel());
+
+        return CreateOrderModel
+                .builder()
+                .ingredients(
+                        Arrays.asList(
+                        bun.get_id(),
+                        mainIngredient.get_id(),
+                        sauceIngredient.get_id(),
+                        bun.get_id())
+                )
+                .build();
+    }
+
+    protected CreateOrderModel getIncorrectOrderContent() {
+        List<String> ingredients = IntStream.range(0,4).mapToObj(x ->
+                "test-" + x
+//            Hashing.sha256()
+//                    .hashString(UUID.randomUUID().toString(), StandardCharsets.UTF_8)
+//                    .toString().substring(0, 24)
+        ).collect(Collectors.toList());
+        return CreateOrderModel.builder().ingredients(ingredients).build();
     }
 }

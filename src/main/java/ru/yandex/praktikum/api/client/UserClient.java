@@ -4,7 +4,7 @@ import io.qameta.allure.Step;
 import io.restassured.response.ValidatableResponse;
 
 import static io.restassured.RestAssured.given;
-import static ru.yandex.praktikum.api.client.helpers.Constatns.*;
+import static ru.yandex.praktikum.api.client.helpers.Constants.*;
 
 public class UserClient {
     @Step("Attempt to make user creation request")
