@@ -1,30 +1,32 @@
 package tests;
 
 import io.qameta.allure.junit4.DisplayName;
+import io.restassured.path.json.JsonPath;
 import io.restassured.response.Response;
 import model.CreateOrderModel;
 import model.CreateUserModel;
 import org.apache.http.HttpStatus;
 import org.junit.Test;
 import java.util.Arrays;
+import java.util.List;
 
-import static helpers.Constants.CREATE_ORDER_WITHOUT_ANY_INGREDIENT_EM;
+import static helpers.Constants.*;
 import static org.hamcrest.Matchers.*;
 import static ru.yandex.praktikum.api.client.IngredientClient.getIngredientsDataResponse;
-import static ru.yandex.praktikum.api.client.OrderClient.getResponseAfterMakingOrderWithAuth;
-import static ru.yandex.praktikum.api.client.OrderClient.getResponseAfterMakingOrderWithoutAuth;
 import static org.hamcrest.core.Is.is;
 import static org.hamcrest.core.IsNot.not;
+import static ru.yandex.praktikum.api.client.OrderClient.*;
 import static ru.yandex.praktikum.api.client.UserClient.getUserCreationResponse;
 import static ru.yandex.praktikum.api.client.UserClient.getUserDeleteResponse;
+import static org.hamcrest.MatcherAssert.assertThat;
 
 public class OrderTests extends TestBase {
     @Test
     @DisplayName("Make order without authorization")
-    public void makeOrderWithoutAuthorizationWithPositiveResult() {
+    public void makeOrderWithoutAuthorizationWithPositiveResultReturnsOkStatus() {
         Response response = getIngredientsDataResponse();
         CreateOrderModel order = getOrderContent(response);
-        getResponseAfterMakingOrderWithoutAuth(order)
+        getResponseToGetOrdersWithoutAuth(order)
                 .statusCode(HttpStatus.SC_OK)
                 .body("success", is(true))
                 .body("name", is(not(emptyString())))
@@ -34,16 +36,16 @@ public class OrderTests extends TestBase {
 
     @Test
     @DisplayName("Make order without authorization with incorrect ingredient hashes")
-    public void makeOrderWithIncorrectIngredientHashWithoutAuthorizationWithNegativeResult() {
+    public void makeOrderWithIncorrectIngredientHashWithoutAuthorizationWithNegativeResultReturnsInternalServerErrorStatus() {
         CreateOrderModel order = getIncorrectOrderContent();
-        getResponseAfterMakingOrderWithoutAuth(order)
+        getResponseToGetOrdersWithoutAuth(order)
                 .statusCode(HttpStatus.SC_INTERNAL_SERVER_ERROR);
     }
 
     @Test
     @DisplayName("Make order without authorization without ingredients")
-    public void makeOrderWithoutIngredientsWithoutAuthorizationWithNegativeResult() {
-        getResponseAfterMakingOrderWithoutAuth(CreateOrderModel
+    public void makeOrderWithoutIngredientsWithoutAuthorizationWithNegativeResultReturnsBadRequestStatus() {
+        getResponseToGetOrdersWithoutAuth(CreateOrderModel
                 .builder()
                 .ingredients(Arrays.asList())
                 .build())
@@ -54,7 +56,7 @@ public class OrderTests extends TestBase {
 
     @Test
     @DisplayName("Make order with authorization")
-    public void makeOrderWithAuthorizationWithPositiveResult() {
+    public void makeOrderWithAuthorizationWithPositiveResultReturnsOkStatus() {
         Response response = getIngredientsDataResponse();
         CreateOrderModel order = getOrderContent(response);
         CreateUserModel user = CreateUserModel.createFakeUser("");
@@ -74,7 +76,7 @@ public class OrderTests extends TestBase {
 
     @Test
     @DisplayName("Make order with authorization with incorrect ingredient hashes")
-    public void makeOrderWithIncorrectIngredientHashWithAuthorizationWithNegativeResult() {
+    public void makeOrderWithIncorrectIngredientHashWithAuthorizationWithNegativeResultReturnsInternalServerErrorStatus() {
         CreateOrderModel order = getIncorrectOrderContent();
         CreateUserModel user = CreateUserModel.createFakeUser("");
         String token = getUserCreationResponse(user)
@@ -97,11 +99,55 @@ public class OrderTests extends TestBase {
 
         getResponseAfterMakingOrderWithAuth(token, CreateOrderModel
                 .builder()
-                .ingredients(Arrays.asList())
+                .ingredients(List.of())
                 .build())
                 .statusCode(HttpStatus.SC_BAD_REQUEST)
                 .body("success", is(false))
                 .body("message", is(CREATE_ORDER_WITHOUT_ANY_INGREDIENT_EM));
+
+        getUserDeleteResponse(token);
+    }
+
+    @Test
+    @DisplayName("Get orders without authorization")
+    public void getOrdersWithoutAuthorizationWithPositiveResult() {
+        Response response = getIngredientsDataResponse();
+
+        getResponseAfterMakingOrdersRequestWithoutAuth()
+                .statusCode(HttpStatus.SC_OK)
+                .body("success", is(true))
+                .body("orders", is(not(empty())))
+                .body("total", greaterThan(0));
+    }
+
+    @Test
+    @DisplayName("Get orders of specific user without authorization")
+    public void getOrdersOfSpecificUserWithoutAuthorizationWithNegativeResult() {
+        getResponseOfGettingOrdersOfSpecificUserWithoutAuth()
+                .statusCode(HttpStatus.SC_UNAUTHORIZED)
+                .body("success", is(false))
+                .body("message", is(GETTING_ORDERS_OF_SPECIFIC_USER_WITHOUT_AUTH_EM));
+    }
+
+    @Test
+    @DisplayName("Get orders of specific user with authorization")
+    public void getOrdersOfSpecificUserWithAuthorizationWithPositiveResult() {
+        Response response = getIngredientsDataResponse();
+        CreateOrderModel order = getOrderContent(response);
+
+        CreateUserModel user = CreateUserModel.createFakeUser("");
+        String token = getUserCreationResponse(user)
+                .extract().path("accessToken")
+                .toString().substring(7);
+        getResponseAfterMakingOrderWithAuth(token, order);
+
+        JsonPath body = getResponseOfGettingOrdersOfSpecificUserWithAuth(token)
+                .statusCode(HttpStatus.SC_OK)
+                .extract().jsonPath();
+
+        assertThat(body.get("success"), is(true));
+        assertThat(body.getList("orders").size(), is(1));
+        assertThat(body.get("orders[0].name"), is(CREATED_BURGER_NAME));
 
         getUserDeleteResponse(token);
     }

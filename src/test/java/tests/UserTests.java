@@ -40,7 +40,7 @@ public class UserTests extends TestBase{
     @Test
     @DisplayName("Attempt to create user without one of mandatory field")
     @Parameters({"email","username", "password"})
-    public void cannotCreateCourierIfThereIsInsufficientDataReturnsBadRequestTest(String excludedField) {
+    public void cannotCreateUserWithoutMandatoryFieldReturnsBadRequestReturnsForbiddenTest(String excludedField) {
         CreateUserModel userShouldBeCreated = CreateUserModel.createFakeUser(excludedField);
         validateFailedUserCreateResponse(
                 getUserCreationResponse(userShouldBeCreated),

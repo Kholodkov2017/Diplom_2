@@ -18,6 +18,7 @@ public class Constants {
 
     //---------------Order API Part------------------------------
     public static final String ORDER_PTH = "/api/orders";
+    public static final String ORDER_PTH_ALL = "/api/orders/all";
 
     //---------------Ingredients API Part------------------------------
     public static final String INGREDIENT_PTH = "/api/ingredients";
