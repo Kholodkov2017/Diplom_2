@@ -2,7 +2,6 @@ package ru.yandex.praktikum.api.client;
 
 import io.qameta.allure.Step;
 import io.restassured.response.Response;
-import io.restassured.response.ValidatableResponse;
 
 import static io.restassured.RestAssured.given;
 import static ru.yandex.praktikum.api.client.helpers.Constants.*;
