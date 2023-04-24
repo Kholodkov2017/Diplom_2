@@ -1,10 +1,8 @@
 package model;
 
 import com.github.javafaker.Faker;
-import lombok.AccessLevel;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
-import lombok.Setter;
 import lombok.experimental.SuperBuilder;
 
 
